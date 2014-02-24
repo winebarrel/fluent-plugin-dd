@@ -23,6 +23,7 @@ Output plugin for Datadog
 
 ```sh
 echo '{"metric":"some.metric.name", "value":50.0}' | fluent-cat datadog.metric
+echo '{"metric":"some.metric.name", "value":100.0, "tag":"any.tag", "host":"any.host", "type":"gauge"}' | fluent-cat datadog.metric
 ```
 
 ## Contributing
