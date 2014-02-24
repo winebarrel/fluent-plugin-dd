@@ -59,6 +59,40 @@ describe Fluent::DdOutput do
     end
   end
 
+  it 'should be called emit_points for each tag (tag is included in the record)' do
+    run_driver do |d, dog|
+      dog.should_receive(:emit_points).with(
+        "some.metric.name",
+        [[Time.parse("2014-02-08 04:14:15 UTC"), 50.0],
+         [Time.parse("2014-02-08 04:14:15 UTC"), 100.0]],
+        {"tags"=>["test.11"]}
+      )
+
+      dog.should_receive(:emit_points).with(
+        "some.metric.name",
+        [[Time.parse("2014-02-08 04:14:15 UTC"), 150.0],
+         [Time.parse("2014-02-08 04:14:15 UTC"), 200.0]],
+        {"tags"=>["test.21"]}
+      )
+
+      dog.should_receive(:emit_points).with(
+        "some.metric.name",
+        [[Time.parse("2014-02-08 04:14:15 UTC"), 250.0],
+         [Time.parse("2014-02-08 04:14:15 UTC"), 300.0]],
+        {"tags"=>["test.31"]}
+      )
+
+      d.emit({"metric" => "some.metric.name", "value" => 50.0,  "tag" => "test.11"}, time)
+      d.emit({"metric" => "some.metric.name", "value" => 100.0, "tag" => "test.11"}, time)
+
+      d.emit({"metric" => "some.metric.name", "value" => 150.0, "tag" => "test.21"}, time)
+      d.emit({"metric" => "some.metric.name", "value" => 200.0, "tag" => "test.21"}, time)
+
+      d.emit({"metric" => "some.metric.name", "value" => 250.0, "tag" => "test.31"}, time)
+      d.emit({"metric" => "some.metric.name", "value" => 300.0, "tag" => "test.31"}, time)
+    end
+  end
+
   it 'should be called emit_points for each host' do
     run_driver do |d, dog|
       dog.should_receive(:emit_points).with(
