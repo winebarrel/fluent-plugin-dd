@@ -14,6 +14,20 @@ describe Fluent::DdOutput do
         "some.metric.name",
         [[Time.parse("2014-02-08 04:14:15 UTC"), 50.0],
          [Time.parse("2014-02-08 04:14:15 UTC"), 100.0]],
+        {}
+      )
+
+      d.emit({"metric" => "some.metric.name", "value" => 50.0}, time)
+      d.emit({"metric" => "some.metric.name", "value" => 100.0}, time)
+    end
+  end
+
+  it 'should be called emit_points with tag' do
+    run_driver(:use_fluentd_tag_for_datadog_tag => true) do |d, dog|
+      dog.should_receive(:emit_points).with(
+        "some.metric.name",
+        [[Time.parse("2014-02-08 04:14:15 UTC"), 50.0],
+         [Time.parse("2014-02-08 04:14:15 UTC"), 100.0]],
         {:tags=>["test.default"]}
       )
 
@@ -23,7 +37,7 @@ describe Fluent::DdOutput do
   end
 
   it 'should be called emit_points for each tag' do
-    run_driver do |d, dog|
+    run_driver(:use_fluentd_tag_for_datadog_tag => true) do |d, dog|
       dog.should_receive(:emit_points).with(
         "some.metric.name",
         [[Time.parse("2014-02-08 04:14:15 UTC"), 50.0],
@@ -133,21 +147,21 @@ describe Fluent::DdOutput do
         "some.metric.name",
         [[Time.parse("2014-02-08 04:14:15 UTC"), 50.0],
          [Time.parse("2014-02-08 04:14:15 UTC"), 100.0]],
-        {:tags=>["test.default"], :host=>"www1.example.com"}
+        {:host=>"www1.example.com"}
       )
 
       dog.should_receive(:emit_points).with(
         "some.metric.name",
         [[Time.parse("2014-02-08 04:14:15 UTC"), 150.0],
          [Time.parse("2014-02-08 04:14:15 UTC"), 200.0]],
-        {:tags=>["test.default"], :host=>"www2.example.com"}
+        {:host=>"www2.example.com"}
       )
 
       dog.should_receive(:emit_points).with(
         "some.metric.name",
         [[Time.parse("2014-02-08 04:14:15 UTC"), 250.0],
          [Time.parse("2014-02-08 04:14:15 UTC"), 300.0]],
-        {:tags=>["test.default"], :host=>"www3.example.com"}
+        {:host=>"www3.example.com"}
       )
 
       d.emit({"metric" => "some.metric.name", "value" => 50.0, "host" => "www1.example.com"}, time)
@@ -165,14 +179,14 @@ describe Fluent::DdOutput do
         "some.metric.name",
         [[Time.parse("2014-02-08 04:14:15 UTC"), 50.0],
          [Time.parse("2014-02-08 04:14:15 UTC"), 100.0]],
-        {:tags=>["test.default"], :type=>"gauge"}
+        {:type=>"gauge"}
       )
 
       dog.should_receive(:emit_points).with(
         "some.metric.name",
         [[Time.parse("2014-02-08 04:14:15 UTC"), 150.0],
          [Time.parse("2014-02-08 04:14:15 UTC"), 200.0]],
-        {:tags=>["test.default"], :type=>"counter"}
+        {:type=>"counter"}
       )
 
       d.emit({"metric" => "some.metric.name", "value" => 50.0, "type" => "gauge"}, time)
@@ -188,7 +202,7 @@ describe Fluent::DdOutput do
         "some.metric.name",
         [[Time.parse("2014-02-08 04:14:15 UTC"), 50.0],
          [Time.parse("2014-02-08 04:14:15 UTC"), 100.0]],
-        {:tags=>["test.default"]}
+        {}
       )
 
       log = d.instance.log

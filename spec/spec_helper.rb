@@ -18,10 +18,21 @@ def run_driver(options = {})
   dd_api_key = options[:dd_api_key] || 'test_dd_api_key'
   host = options[:host] || 'test_host'
 
+  option_keys = [
+    :use_fluentd_tag_for_datadog_tag
+  ]
+
+  additional_options = option_keys.map {|key|
+    if options[key]
+      "#{key} #{options[key]}"
+    end
+  }.join("\n")
+
   fluentd_conf = <<-EOS
 type datadog
 dd_api_key #{dd_api_key}
 host #{host}
+#{additional_options}
   EOS
 
   tag = options[:tag] || 'test.default'

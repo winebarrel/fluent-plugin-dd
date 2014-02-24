@@ -7,6 +7,7 @@ class Fluent::DdOutput < Fluent::BufferedOutput
 
   config_param :dd_api_key, :string
   config_param :host, :string, :default => nil
+  config_param :use_fluentd_tag_for_datadog_tag, :bool, :default => false
 
   def initialize
     super
@@ -51,8 +52,13 @@ class Fluent::DdOutput < Fluent::BufferedOutput
 
       record['metric']
     }.chunk {|tag, time, record|
-      tag = record['tag'] || tag
-      [tag] + record.values_at('metric', 'host', 'type')
+      dd_tag = record['tag']
+
+      if not dd_tag and @use_fluentd_tag_for_datadog_tag
+        dd_tag = tag
+      end
+
+      [dd_tag] + record.values_at('metric', 'host', 'type')
     }.each {|i, records|
       tag, metric, host, type = i
 
