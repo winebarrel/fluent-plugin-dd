@@ -63,9 +63,9 @@ class Fluent::DdOutput < Fluent::BufferedOutput
       end
 
       options = {}
-      options['tags'] = tag.split(',').map {|i| i.strip } if tag
-      options['host'] = host if host
-      options['type'] = type if type
+      options[:tags] = tag.split(',').map {|i| i.strip } if tag
+      options[:host] = host if host
+      options[:type] = type if type
 
       @dog.emit_points(metric, points, options)
     }
