@@ -125,9 +125,9 @@ describe Fluent::DdOutput do
 
       log = d.instance.log
       log.should_receive(:warn)
-         .with('`metric` key does not exist: {"no metric"=>"some.metric.name", "value"=>51.0, "time"=>"2014-02-08T04:14:15Z", "tag"=>"test.default"}')
+         .with('`metric` key does not exist: ["test.default", 1391832855, {"no metric"=>"some.metric.name", "value"=>51.0}]')
       log.should_receive(:warn)
-         .with('`metric` key does not exist: {"no metric"=>"some.metric.name", "value"=>101.0, "time"=>"2014-02-08T04:14:15Z", "tag"=>"test.default"}')
+         .with('`metric` key does not exist: ["test.default", 1391832855, {"no metric"=>"some.metric.name", "value"=>101.0}]')
 
       d.emit({"no metric" => "some.metric.name", "value" => 51.0}, time)
       d.emit({"no metric" => "some.metric.name", "value" => 101.0}, time)
