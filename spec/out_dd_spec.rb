@@ -93,6 +93,40 @@ describe Fluent::DdOutput do
     end
   end
 
+  it 'should be called emit_points with multiple tags' do
+    run_driver do |d, dog|
+      dog.should_receive(:emit_points).with(
+        "some.metric.name",
+        [[Time.parse("2014-02-08 04:14:15 UTC"), 50.0],
+         [Time.parse("2014-02-08 04:14:15 UTC"), 100.0]],
+        {"tags"=>["test.12","test.13"]}
+      )
+
+      dog.should_receive(:emit_points).with(
+        "some.metric.name",
+        [[Time.parse("2014-02-08 04:14:15 UTC"), 150.0],
+         [Time.parse("2014-02-08 04:14:15 UTC"), 200.0]],
+        {"tags"=>["test.22","test.23"]}
+      )
+
+      dog.should_receive(:emit_points).with(
+        "some.metric.name",
+        [[Time.parse("2014-02-08 04:14:15 UTC"), 250.0],
+         [Time.parse("2014-02-08 04:14:15 UTC"), 300.0]],
+        {"tags"=>["test.32","test.33"]}
+      )
+
+      d.emit({"metric" => "some.metric.name", "value" => 50.0,  "tag" => "test.12,test.13"}, time)
+      d.emit({"metric" => "some.metric.name", "value" => 100.0, "tag" => "test.12,test.13"}, time)
+
+      d.emit({"metric" => "some.metric.name", "value" => 150.0, "tag" => "test.22,test.23"}, time)
+      d.emit({"metric" => "some.metric.name", "value" => 200.0, "tag" => "test.22,test.23"}, time)
+
+      d.emit({"metric" => "some.metric.name", "value" => 250.0, "tag" => "test.32,test.33"}, time)
+      d.emit({"metric" => "some.metric.name", "value" => 300.0, "tag" => "test.32,test.33"}, time)
+    end
+  end
+
   it 'should be called emit_points for each host' do
     run_driver do |d, dog|
       dog.should_receive(:emit_points).with(
