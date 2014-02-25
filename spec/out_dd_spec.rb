@@ -22,6 +22,20 @@ describe Fluent::DdOutput do
     end
   end
 
+  it 'should be called emit_points in the background' do
+    run_driver(:emit_in_background => true) do |d, dog|
+      dog.should_receive(:emit_points).with(
+        "some.metric.name",
+        [[Time.parse("2014-02-08 04:14:15 UTC"), 50.0],
+         [Time.parse("2014-02-08 04:14:15 UTC"), 100.0]],
+        {}
+      )
+
+      d.emit({"metric" => "some.metric.name", "value" => 50.0}, time)
+      d.emit({"metric" => "some.metric.name", "value" => 100.0}, time)
+    end
+  end
+
   it 'should be called emit_points with tag' do
     run_driver(:use_fluentd_tag_for_datadog_tag => true) do |d, dog|
       dog.should_receive(:emit_points).with(

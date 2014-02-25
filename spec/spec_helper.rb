@@ -19,7 +19,8 @@ def run_driver(options = {})
   host = options[:host] || 'test_host'
 
   option_keys = [
-    :use_fluentd_tag_for_datadog_tag
+    :use_fluentd_tag_for_datadog_tag,
+    :emit_in_background,
   ]
 
   additional_options = option_keys.map {|key|

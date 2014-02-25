@@ -8,19 +8,37 @@ class Fluent::DdOutput < Fluent::BufferedOutput
   config_param :dd_api_key, :string
   config_param :host, :string, :default => nil
   config_param :use_fluentd_tag_for_datadog_tag, :bool, :default => false
+  config_param :emit_in_background, :bool, :default => false
 
   def initialize
     super
     require 'dogapi'
     require 'socket'
+    require 'thread'
   end
 
   def start
     super
+
+    if @emit_in_background
+      @queue = Queue.new
+
+      @thread = Thread.start do
+        while(chunk = @queue.pop)
+          emit_points(chunk)
+          Thread.pass
+        end
+      end
+    end
   end
 
   def shutdown
     super
+
+    if @emit_in_background
+      @queue.push(false)
+      @thread.join
+    end
   end
 
   def configure(conf)
@@ -43,6 +61,16 @@ class Fluent::DdOutput < Fluent::BufferedOutput
   end
 
   def write(chunk)
+    if @emit_in_background
+      @queue.push(chunk)
+    else
+      emit_points(chunk)
+    end
+  end
+
+  private
+
+  def emit_points(chunk)
     enum = chunk.to_enum(:msgpack_each)
 
     enum.select {|tag, time, record|
