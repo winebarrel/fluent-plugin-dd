@@ -15,18 +15,11 @@ end
 def run_driver(options = {})
   options = options.dup
 
-  dd_api_key = options[:dd_api_key] || 'test_dd_api_key'
-  host = options[:host] || 'test_host'
+  dd_api_key = options.delete(:dd_api_key) || 'test_dd_api_key'
+  host = options.delete(:host) || 'test_host'
 
-  option_keys = [
-    :use_fluentd_tag_for_datadog_tag,
-    :emit_in_background,
-  ]
-
-  additional_options = option_keys.map {|key|
-    if options[key]
-      "#{key} #{options[key]}"
-    end
+  additional_options = options.map {|key, value|
+    "#{key} #{value}"
   }.join("\n")
 
   fluentd_conf = <<-EOS
