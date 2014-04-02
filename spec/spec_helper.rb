@@ -6,6 +6,18 @@ require 'time'
 # Disable Test::Unit
 module Test::Unit::RunCount; def run(*); end; end
 
+class Fluent::DdOutput < Fluent::BufferedOutput
+  private
+  alias_method :orig_emit_points, :emit_points
+
+  def emit_points(*args)
+    if $threads_array_for_test
+      $threads_array_for_test << Thread.current
+    end
+    orig_emit_points(*args)
+  end
+end
+
 RSpec.configure do |config|
   config.before(:all) do
     Fluent::Test.setup

@@ -22,17 +22,51 @@ describe Fluent::DdOutput do
     end
   end
 
-  it 'should be called emit_points in the background' do
-    run_driver(:emit_in_background => true) do |d, dog|
-      dog.should_receive(:emit_points).with(
-        "some.metric.name",
-        [[Time.parse("2014-02-08 04:14:15 UTC"), 50.0],
-         [Time.parse("2014-02-08 04:14:15 UTC"), 100.0]],
-        {}
-      )
+  context 'with emit_in_background' do
+    before do
+      $threads_array_for_test = []
+    end
 
-      d.emit({"metric" => "some.metric.name", "value" => 50.0}, time)
-      d.emit({"metric" => "some.metric.name", "value" => 100.0}, time)
+    after do
+      $threads_array_for_test = nil
+    end
+
+    it 'should be called emit_points in the background' do
+      run_driver(:emit_in_background => true) do |d, dog|
+        dog.should_receive(:emit_points).with(
+          "some.metric.name",
+          [[Time.parse("2014-02-08 04:14:15 UTC"), 50.0],
+           [Time.parse("2014-02-08 04:14:15 UTC"), 100.0]],
+          {}
+        )
+
+        d.emit({"metric" => "some.metric.name", "value" => 50.0}, time)
+        d.emit({"metric" => "some.metric.name", "value" => 100.0}, time)
+      end
+    end
+
+    it 'should be called emit_points in the background and in the different thread' do
+      run_driver(
+        :emit_in_background => true,
+        :concurrency => 2,
+      ) do |d, dog|
+        dog.should_receive(:emit_points).with(
+          "some.metric.name.1",
+          [[Time.parse("2014-02-08 04:14:15 UTC"), 50.0]],
+          {}
+        )
+        dog.should_receive(:emit_points).with(
+          "some.metric.name.2",
+          [[Time.parse("2014-02-08 04:14:15 UTC"), 100.0]],
+          {}
+        )
+
+        d.emit({"metric" => "some.metric.name.1", "value" => 50.0}, time)
+        d.emit({"metric" => "some.metric.name.2", "value" => 100.0}, time)
+      end
+
+      expect($threads_array_for_test.size).to eq(2)
+      expect($threads_array_for_test[0]).not_to eq($threads_array_for_test[1])
     end
   end
 
