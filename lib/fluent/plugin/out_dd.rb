@@ -9,6 +9,7 @@ class Fluent::DdOutput < Fluent::BufferedOutput
   config_param :host, :string, :default => nil
   config_param :use_fluentd_tag_for_datadog_tag, :bool, :default => false
   config_param :emit_in_background, :bool, :default => false
+  config_param :concurrency, :integer, :default => nil
 
   def initialize
     super
@@ -23,10 +24,12 @@ class Fluent::DdOutput < Fluent::BufferedOutput
     if @emit_in_background
       @queue = Queue.new
 
-      @thread = Thread.start do
-        while(chunk = @queue.pop)
-          emit_points(chunk)
-          Thread.pass
+      @threads = @concurrency.times.map do
+        Thread.start do
+          while (job = @queue.pop)
+            emit_points(*job)
+            Thread.pass
+          end
         end
       end
     end
@@ -36,8 +39,12 @@ class Fluent::DdOutput < Fluent::BufferedOutput
     super
 
     if @emit_in_background
-      @queue.push(false)
-      @thread.join
+      @threads.size.times do
+        @queue.push(false)
+      end
+      @threads.each do |thread|
+        thread.join
+      end
     end
   end
 
@@ -47,6 +54,11 @@ class Fluent::DdOutput < Fluent::BufferedOutput
     unless @dd_api_key
       raise Fluent::ConfigError, '`dd_api_key` is required'
     end
+
+    if !@emit_in_background && @concurrency
+      raise Fluent::ConfigError, '`concurrency` should be used with `emit_in_background`'
+    end
+    @concurrency ||= 1
 
     unless @host
       @host = %x[hostname -f 2> /dev/null].strip
@@ -61,16 +73,24 @@ class Fluent::DdOutput < Fluent::BufferedOutput
   end
 
   def write(chunk)
-    if @emit_in_background
-      @queue.push(chunk)
-    else
-      emit_points(chunk)
+    jobs = chunk_to_jobs(chunk)
+
+    jobs.each do |job|
+      if @emit_in_background
+        @queue.push(job)
+      else
+        emit_points(*job)
+      end
     end
   end
 
   private
 
-  def emit_points(chunk)
+  def emit_points(metric, points, options)
+    @dog.emit_points(metric, points, options)
+  end
+
+  def chunk_to_jobs(chunk)
     enum = chunk.to_enum(:msgpack_each)
 
     enum.select {|tag, time, record|
@@ -87,7 +107,7 @@ class Fluent::DdOutput < Fluent::BufferedOutput
       end
 
       [dd_tag] + record.values_at('metric', 'host', 'type')
-    }.each {|i, records|
+    }.map {|i, records|
       tag, metric, host, type = i
 
       points = records.map do |tag, time, record|
@@ -101,7 +121,7 @@ class Fluent::DdOutput < Fluent::BufferedOutput
       options[:host] = host if host
       options[:type] = type if type
 
-      @dog.emit_points(metric, points, options)
+      [metric, points, options]
     }
   end
 end
