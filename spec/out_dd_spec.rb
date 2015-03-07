@@ -11,6 +11,9 @@ describe Fluent::DdOutput do
       dd_api_key API_KEY
       dd_app_key APP_KEY
       host my_host.example.com
+      device my_device
+      silent false
+      timeout 5
       use_fluentd_tag_for_datadog_tag true
       emit_in_background true
     EOS
@@ -18,12 +21,15 @@ describe Fluent::DdOutput do
     expect(driver.instance.dd_api_key).to eq 'API_KEY'
     expect(driver.instance.dd_app_key).to eq 'APP_KEY'
     expect(driver.instance.host).to eq 'my_host.example.com'
+    expect(driver.instance.device).to eq 'my_device'
+    expect(driver.instance.silent).to eq false
+    expect(driver.instance.timeout).to eq 5
     expect(driver.instance.use_fluentd_tag_for_datadog_tag).to eq true
     expect(driver.instance.emit_in_background).to eq true
   end
 
   it 'should receive an API key' do
-    expect(Dogapi::Client).to receive(:new).with("test_dd_api_key", nil, "test_host")
+    expect(Dogapi::Client).to receive(:new).with("test_dd_api_key", nil, "test_host", nil, true, nil)
     run_driver {|d, dog| }
   end
 
@@ -237,6 +243,38 @@ describe Fluent::DdOutput do
       d.emit({"metric" => "some.metric.name", "value" => 200.0, "host" => "www2.example.com"}, time)
       d.emit({"metric" => "some.metric.name", "value" => 250.0, "host" => "www3.example.com"}, time)
       d.emit({"metric" => "some.metric.name", "value" => 300.0, "host" => "www3.example.com"}, time)
+    end
+  end
+
+  it 'should be called emit_points for each device' do
+    run_driver do |d, dog|
+      expect(dog).to receive(:emit_points).with(
+        "some.metric.name",
+        [[Time.parse("2014-02-08 04:14:15 UTC"), 50.0],
+         [Time.parse("2014-02-08 04:14:15 UTC"), 100.0]],
+        {:device=>"device1"}
+      )
+
+      expect(dog).to receive(:emit_points).with(
+        "some.metric.name",
+        [[Time.parse("2014-02-08 04:14:15 UTC"), 150.0],
+         [Time.parse("2014-02-08 04:14:15 UTC"), 200.0]],
+        {:device=>"device2"}
+      )
+
+      expect(dog).to receive(:emit_points).with(
+        "some.metric.name",
+        [[Time.parse("2014-02-08 04:14:15 UTC"), 250.0],
+         [Time.parse("2014-02-08 04:14:15 UTC"), 300.0]],
+        {:device=>"device3"}
+      )
+
+      d.emit({"metric" => "some.metric.name", "value" => 50.0, "device" => "device1"}, time)
+      d.emit({"metric" => "some.metric.name", "value" => 100.0, "device" => "device1"}, time)
+      d.emit({"metric" => "some.metric.name", "value" => 150.0, "device" => "device2"}, time)
+      d.emit({"metric" => "some.metric.name", "value" => 200.0, "device" => "device2"}, time)
+      d.emit({"metric" => "some.metric.name", "value" => 250.0, "device" => "device3"}, time)
+      d.emit({"metric" => "some.metric.name", "value" => 300.0, "device" => "device3"}, time)
     end
   end
 

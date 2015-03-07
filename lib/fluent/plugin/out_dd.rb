@@ -8,6 +8,9 @@ class Fluent::DdOutput < Fluent::BufferedOutput
   config_param :dd_api_key, :string
   config_param :dd_app_key, :string, :default => nil
   config_param :host, :string, :default => nil
+  config_param :device, :string, :default => nil
+  config_param :silent, :bool, :default => true
+  config_param :timeout, :integer, :default => nil
   config_param :use_fluentd_tag_for_datadog_tag, :bool, :default => false
   config_param :emit_in_background, :bool, :default => false
   config_param :concurrency, :integer, :default => nil
@@ -66,7 +69,7 @@ class Fluent::DdOutput < Fluent::BufferedOutput
       @host = Socket.gethostname if @host.empty?
     end
 
-    @dog = Dogapi::Client.new(@dd_api_key, @dd_app_key, @host)
+    @dog = Dogapi::Client.new(@dd_api_key, @dd_app_key, @host, @device, @silent, @timeout)
   end
 
   def format(tag, time, record)
@@ -107,9 +110,9 @@ class Fluent::DdOutput < Fluent::BufferedOutput
         dd_tag = tag
       end
 
-      [dd_tag] + record.values_at('metric', 'host', 'type')
+      [dd_tag] + record.values_at('metric', 'host', 'type', 'device')
     }.map {|i, records|
-      tag, metric, host, type = i
+      tag, metric, host, type, device = i
 
       points = records.map do |tag, time, record|
         time = Time.at(time)
@@ -121,6 +124,7 @@ class Fluent::DdOutput < Fluent::BufferedOutput
       options[:tags] = tag.split(',').map {|i| i.strip } if tag
       options[:host] = host if host
       options[:type] = type if type
+      options[:device] = device if device
 
       [metric, points, options]
     }
