@@ -6,7 +6,7 @@ Gem::Specification.new do |spec|
   spec.email         = ['sugawara@cookpad.com']
   spec.description   = %q{Output plugin for Datadog}
   spec.summary       = %q{Output plugin for Datadog}
-  spec.homepage      = 'https://bitbucket.org/winebarrel/fluent-plugin-dd'
+  spec.homepage      = 'https://github.com/winebarrel/fluent-plugin-dd'
   spec.license       = 'MIT'
 
   spec.files         = `git ls-files`.split($/)
