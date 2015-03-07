@@ -15,6 +15,7 @@ Output plugin for Datadog
 <match datadog.**>
   type dd
   dd_api_key ...
+  #dd_app_key_key ...
   #host my_host.example.com
   #use_fluentd_tag_for_datadog_tag false
   #emit_in_background false
