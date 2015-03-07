@@ -6,7 +6,7 @@ class Fluent::DdOutput < Fluent::BufferedOutput
   end
 
   config_param :dd_api_key, :string
-  config_param :dd_application_key, :string, :default => nil
+  config_param :dd_app_key, :string, :default => nil
   config_param :host, :string, :default => nil
   config_param :use_fluentd_tag_for_datadog_tag, :bool, :default => false
   config_param :emit_in_background, :bool, :default => false
@@ -66,7 +66,7 @@ class Fluent::DdOutput < Fluent::BufferedOutput
       @host = Socket.gethostname if @host.empty?
     end
 
-    @dog = Dogapi::Client.new(@dd_api_key, @dd_application_key, @host)
+    @dog = Dogapi::Client.new(@dd_api_key, @dd_app_key, @host)
   end
 
   def format(tag, time, record)
