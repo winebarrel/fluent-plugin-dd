@@ -3,6 +3,25 @@ describe Fluent::DdOutput do
     Time.parse('2014-02-08 04:14:15 UTC').to_i
   }
 
+  it 'should load config' do
+    driver = Fluent::Test::OutputTestDriver.new(Fluent::DdOutput, 'test.default')
+
+    driver.configure(<<-EOS)
+      type dd
+      dd_api_key API_KEY
+      dd_app_key APP_KEY
+      host my_host.example.com
+      use_fluentd_tag_for_datadog_tag true
+      emit_in_background true
+    EOS
+
+    expect(driver.instance.dd_api_key).to eq 'API_KEY'
+    expect(driver.instance.dd_app_key).to eq 'APP_KEY'
+    expect(driver.instance.host).to eq 'my_host.example.com'
+    expect(driver.instance.use_fluentd_tag_for_datadog_tag).to eq true
+    expect(driver.instance.emit_in_background).to eq true
+  end
+
   it 'should receive an API key' do
     expect(Dogapi::Client).to receive(:new).with("test_dd_api_key", nil, "test_host")
     run_driver {|d, dog| }
