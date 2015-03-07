@@ -2,8 +2,8 @@
 
 Output plugin for Datadog
 
-[![Gem Version](https://badge.fury.io/rb/fluent-plugin-dd.png)](http://badge.fury.io/rb/fluent-plugin-dd)
-[![Build Status](https://drone.io/bitbucket.org/winebarrel/fluent-plugin-dd/status.png)](https://drone.io/bitbucket.org/winebarrel/fluent-plugin-dd/latest)
+[![Gem Version](https://badge.fury.io/rb/fluent-plugin-dd.svg)](http://badge.fury.io/rb/fluent-plugin-dd)
+[![Build Status](https://travis-ci.org/winebarrel/fluent-plugin-dd.svg?branch=master)](https://travis-ci.org/winebarrel/fluent-plugin-dd)
 
 ## Installation
 
@@ -15,7 +15,11 @@ Output plugin for Datadog
 <match datadog.**>
   type dd
   dd_api_key ...
+  #dd_app_key_key ...
   #host my_host.example.com
+  #device my_device
+  #silent true
+  #timeout 5
   #use_fluentd_tag_for_datadog_tag false
   #emit_in_background false
 </match>
@@ -25,7 +29,7 @@ Output plugin for Datadog
 
 ```sh
 echo '{"metric":"some.metric.name", "value":50.0}' | fluent-cat datadog.metric
-echo '{"metric":"some.metric.name", "value":100.0, "tag":"any.tag", "host":"any.host", "type":"gauge"}' | fluent-cat datadog.metric
+echo '{"metric":"some.metric.name", "value":100.0, "tag":"any.tag", "host":"any.host", "type":"gauge", "device":"my_device"}' | fluent-cat datadog.metric
 ```
 
 ## Contributing

@@ -3,14 +3,39 @@ describe Fluent::DdOutput do
     Time.parse('2014-02-08 04:14:15 UTC').to_i
   }
 
+  it 'should load config' do
+    driver = Fluent::Test::OutputTestDriver.new(Fluent::DdOutput, 'test.default')
+
+    driver.configure(<<-EOS)
+      type dd
+      dd_api_key API_KEY
+      dd_app_key APP_KEY
+      host my_host.example.com
+      device my_device
+      silent false
+      timeout 5
+      use_fluentd_tag_for_datadog_tag true
+      emit_in_background true
+    EOS
+
+    expect(driver.instance.dd_api_key).to eq 'API_KEY'
+    expect(driver.instance.dd_app_key).to eq 'APP_KEY'
+    expect(driver.instance.host).to eq 'my_host.example.com'
+    expect(driver.instance.device).to eq 'my_device'
+    expect(driver.instance.silent).to eq false
+    expect(driver.instance.timeout).to eq 5
+    expect(driver.instance.use_fluentd_tag_for_datadog_tag).to eq true
+    expect(driver.instance.emit_in_background).to eq true
+  end
+
   it 'should receive an API key' do
-    Dogapi::Client.should_receive(:new).with("test_dd_api_key", nil, "test_host")
+    expect(Dogapi::Client).to receive(:new).with("test_dd_api_key", nil, "test_host", nil, true, nil)
     run_driver {|d, dog| }
   end
 
   it 'should be called emit_points' do
     run_driver do |d, dog|
-      dog.should_receive(:emit_points).with(
+      expect(dog).to receive(:emit_points).with(
         "some.metric.name",
         [[Time.parse("2014-02-08 04:14:15 UTC"), 50.0],
          [Time.parse("2014-02-08 04:14:15 UTC"), 100.0]],
@@ -33,7 +58,7 @@ describe Fluent::DdOutput do
 
     it 'should be called emit_points in the background' do
       run_driver(:emit_in_background => true) do |d, dog|
-        dog.should_receive(:emit_points).with(
+        expect(dog).to receive(:emit_points).with(
           "some.metric.name",
           [[Time.parse("2014-02-08 04:14:15 UTC"), 50.0],
            [Time.parse("2014-02-08 04:14:15 UTC"), 100.0]],
@@ -50,12 +75,12 @@ describe Fluent::DdOutput do
         :emit_in_background => true,
         :concurrency => 2,
       ) do |d, dog|
-        dog.should_receive(:emit_points).with(
+        expect(dog).to receive(:emit_points).with(
           "some.metric.name.1",
           [[Time.parse("2014-02-08 04:14:15 UTC"), 50.0]],
           {}
         )
-        dog.should_receive(:emit_points).with(
+        expect(dog).to receive(:emit_points).with(
           "some.metric.name.2",
           [[Time.parse("2014-02-08 04:14:15 UTC"), 100.0]],
           {}
@@ -72,7 +97,7 @@ describe Fluent::DdOutput do
 
   it 'should be called emit_points with tag' do
     run_driver(:use_fluentd_tag_for_datadog_tag => true) do |d, dog|
-      dog.should_receive(:emit_points).with(
+      expect(dog).to receive(:emit_points).with(
         "some.metric.name",
         [[Time.parse("2014-02-08 04:14:15 UTC"), 50.0],
          [Time.parse("2014-02-08 04:14:15 UTC"), 100.0]],
@@ -86,21 +111,21 @@ describe Fluent::DdOutput do
 
   it 'should be called emit_points for each tag' do
     run_driver(:use_fluentd_tag_for_datadog_tag => true) do |d, dog|
-      dog.should_receive(:emit_points).with(
+      expect(dog).to receive(:emit_points).with(
         "some.metric.name",
         [[Time.parse("2014-02-08 04:14:15 UTC"), 50.0],
          [Time.parse("2014-02-08 04:14:15 UTC"), 100.0]],
         {:tags=>["test.1"]}
       )
 
-      dog.should_receive(:emit_points).with(
+      expect(dog).to receive(:emit_points).with(
         "some.metric.name",
         [[Time.parse("2014-02-08 04:14:15 UTC"), 150.0],
          [Time.parse("2014-02-08 04:14:15 UTC"), 200.0]],
         {:tags=>["test.2"]}
       )
 
-      dog.should_receive(:emit_points).with(
+      expect(dog).to receive(:emit_points).with(
         "some.metric.name",
         [[Time.parse("2014-02-08 04:14:15 UTC"), 250.0],
          [Time.parse("2014-02-08 04:14:15 UTC"), 300.0]],
@@ -123,21 +148,21 @@ describe Fluent::DdOutput do
 
   it 'should be called emit_points for each tag (tag is included in the record)' do
     run_driver do |d, dog|
-      dog.should_receive(:emit_points).with(
+      expect(dog).to receive(:emit_points).with(
         "some.metric.name",
         [[Time.parse("2014-02-08 04:14:15 UTC"), 50.0],
          [Time.parse("2014-02-08 04:14:15 UTC"), 100.0]],
         {:tags=>["test.11"]}
       )
 
-      dog.should_receive(:emit_points).with(
+      expect(dog).to receive(:emit_points).with(
         "some.metric.name",
         [[Time.parse("2014-02-08 04:14:15 UTC"), 150.0],
          [Time.parse("2014-02-08 04:14:15 UTC"), 200.0]],
         {:tags=>["test.21"]}
       )
 
-      dog.should_receive(:emit_points).with(
+      expect(dog).to receive(:emit_points).with(
         "some.metric.name",
         [[Time.parse("2014-02-08 04:14:15 UTC"), 250.0],
          [Time.parse("2014-02-08 04:14:15 UTC"), 300.0]],
@@ -157,21 +182,21 @@ describe Fluent::DdOutput do
 
   it 'should be called emit_points with multiple tags' do
     run_driver do |d, dog|
-      dog.should_receive(:emit_points).with(
+      expect(dog).to receive(:emit_points).with(
         "some.metric.name",
         [[Time.parse("2014-02-08 04:14:15 UTC"), 50.0],
          [Time.parse("2014-02-08 04:14:15 UTC"), 100.0]],
         {:tags=>["test.12","test.13"]}
       )
 
-      dog.should_receive(:emit_points).with(
+      expect(dog).to receive(:emit_points).with(
         "some.metric.name",
         [[Time.parse("2014-02-08 04:14:15 UTC"), 150.0],
          [Time.parse("2014-02-08 04:14:15 UTC"), 200.0]],
         {:tags=>["test.22","test.23"]}
       )
 
-      dog.should_receive(:emit_points).with(
+      expect(dog).to receive(:emit_points).with(
         "some.metric.name",
         [[Time.parse("2014-02-08 04:14:15 UTC"), 250.0],
          [Time.parse("2014-02-08 04:14:15 UTC"), 300.0]],
@@ -191,21 +216,21 @@ describe Fluent::DdOutput do
 
   it 'should be called emit_points for each host' do
     run_driver do |d, dog|
-      dog.should_receive(:emit_points).with(
+      expect(dog).to receive(:emit_points).with(
         "some.metric.name",
         [[Time.parse("2014-02-08 04:14:15 UTC"), 50.0],
          [Time.parse("2014-02-08 04:14:15 UTC"), 100.0]],
         {:host=>"www1.example.com"}
       )
 
-      dog.should_receive(:emit_points).with(
+      expect(dog).to receive(:emit_points).with(
         "some.metric.name",
         [[Time.parse("2014-02-08 04:14:15 UTC"), 150.0],
          [Time.parse("2014-02-08 04:14:15 UTC"), 200.0]],
         {:host=>"www2.example.com"}
       )
 
-      dog.should_receive(:emit_points).with(
+      expect(dog).to receive(:emit_points).with(
         "some.metric.name",
         [[Time.parse("2014-02-08 04:14:15 UTC"), 250.0],
          [Time.parse("2014-02-08 04:14:15 UTC"), 300.0]],
@@ -221,16 +246,48 @@ describe Fluent::DdOutput do
     end
   end
 
+  it 'should be called emit_points for each device' do
+    run_driver do |d, dog|
+      expect(dog).to receive(:emit_points).with(
+        "some.metric.name",
+        [[Time.parse("2014-02-08 04:14:15 UTC"), 50.0],
+         [Time.parse("2014-02-08 04:14:15 UTC"), 100.0]],
+        {:device=>"device1"}
+      )
+
+      expect(dog).to receive(:emit_points).with(
+        "some.metric.name",
+        [[Time.parse("2014-02-08 04:14:15 UTC"), 150.0],
+         [Time.parse("2014-02-08 04:14:15 UTC"), 200.0]],
+        {:device=>"device2"}
+      )
+
+      expect(dog).to receive(:emit_points).with(
+        "some.metric.name",
+        [[Time.parse("2014-02-08 04:14:15 UTC"), 250.0],
+         [Time.parse("2014-02-08 04:14:15 UTC"), 300.0]],
+        {:device=>"device3"}
+      )
+
+      d.emit({"metric" => "some.metric.name", "value" => 50.0, "device" => "device1"}, time)
+      d.emit({"metric" => "some.metric.name", "value" => 100.0, "device" => "device1"}, time)
+      d.emit({"metric" => "some.metric.name", "value" => 150.0, "device" => "device2"}, time)
+      d.emit({"metric" => "some.metric.name", "value" => 200.0, "device" => "device2"}, time)
+      d.emit({"metric" => "some.metric.name", "value" => 250.0, "device" => "device3"}, time)
+      d.emit({"metric" => "some.metric.name", "value" => 300.0, "device" => "device3"}, time)
+    end
+  end
+
   it 'should be called emit_points for each type' do
     run_driver do |d, dog|
-      dog.should_receive(:emit_points).with(
+      expect(dog).to receive(:emit_points).with(
         "some.metric.name",
         [[Time.parse("2014-02-08 04:14:15 UTC"), 50.0],
          [Time.parse("2014-02-08 04:14:15 UTC"), 100.0]],
         {:type=>"gauge"}
       )
 
-      dog.should_receive(:emit_points).with(
+      expect(dog).to receive(:emit_points).with(
         "some.metric.name",
         [[Time.parse("2014-02-08 04:14:15 UTC"), 150.0],
          [Time.parse("2014-02-08 04:14:15 UTC"), 200.0]],
@@ -246,7 +303,7 @@ describe Fluent::DdOutput do
 
   it 'should be skipped if `metric` key does not exists' do
     run_driver do |d, dog|
-      dog.should_receive(:emit_points).with(
+      expect(dog).to receive(:emit_points).with(
         "some.metric.name",
         [[Time.parse("2014-02-08 04:14:15 UTC"), 50.0],
          [Time.parse("2014-02-08 04:14:15 UTC"), 100.0]],
@@ -254,9 +311,9 @@ describe Fluent::DdOutput do
       )
 
       log = d.instance.log
-      log.should_receive(:warn)
+      expect(log).to receive(:warn)
          .with('`metric` key does not exist: ["test.default", 1391832855, {"no metric"=>"some.metric.name", "value"=>51.0}]')
-      log.should_receive(:warn)
+      expect(log).to receive(:warn)
          .with('`metric` key does not exist: ["test.default", 1391832855, {"no metric"=>"some.metric.name", "value"=>101.0}]')
 
       d.emit({"no metric" => "some.metric.name", "value" => 51.0}, time)
