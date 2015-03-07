@@ -2,7 +2,7 @@
 
 Output plugin for Datadog
 
-[![Gem Version](https://badge.fury.io/rb/fluent-plugin-dd.png)](http://badge.fury.io/rb/fluent-plugin-dd)
+[![Gem Version](https://badge.fury.io/rb/fluent-plugin-dd.svg)](http://badge.fury.io/rb/fluent-plugin-dd)
 [![Build Status](https://drone.io/bitbucket.org/winebarrel/fluent-plugin-dd/status.png)](https://drone.io/bitbucket.org/winebarrel/fluent-plugin-dd/latest)
 
 ## Installation
