@@ -5,8 +5,8 @@ class Fluent::DdOutput < Fluent::BufferedOutput
     define_method('log') { $log }
   end
 
-  config_param :dd_api_key, :string
-  config_param :dd_app_key, :string, :default => nil
+  config_param :dd_api_key, :string, :secret => true
+  config_param :dd_app_key, :string, :default => nil, :secret => true
   config_param :host, :string, :default => nil
   config_param :device, :string, :default => nil
   config_param :silent, :bool, :default => true
