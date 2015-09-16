@@ -1,7 +1,7 @@
 # coding: utf-8
 Gem::Specification.new do |spec|
   spec.name          = 'fluent-plugin-dd'
-  spec.version       = '0.1.7'
+  spec.version       = '0.1.8'
   spec.authors       = ['Genki Sugawara']
   spec.email         = ['sugawara@cookpad.com']
   spec.description   = %q{Output plugin for Datadog}
