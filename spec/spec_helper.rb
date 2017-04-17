@@ -1,4 +1,6 @@
 require 'fluent/test'
+require 'fluent/test/driver/output'
+require 'fluent/test/helpers'
 require 'fluent/plugin/out_dd'
 require 'dogapi'
 require 'time'
@@ -6,18 +8,6 @@ require 'time'
 # Disable Test::Unit
 module Test::Unit::RunCount; def run(*); end; end
 Test::Unit.run = true if defined?(Test::Unit) && Test::Unit.respond_to?(:run=)
-
-class Fluent::DdOutput < Fluent::BufferedOutput
-  private
-  alias_method :orig_emit_points, :emit_points
-
-  def emit_points(*args)
-    if $threads_array_for_test
-      $threads_array_for_test << Thread.current
-    end
-    orig_emit_points(*args)
-  end
-end
 
 RSpec.configure do |config|
   config.before(:all) do
@@ -43,9 +33,9 @@ host #{host}
   EOS
 
   tag = options[:tag] || 'test.default'
-  driver = Fluent::Test::OutputTestDriver.new(Fluent::DdOutput, tag).configure(fluentd_conf)
+  driver = Fluent::Test::Driver::Output.new(Fluent::Plugin::DdOutput).configure(fluentd_conf)
 
-  driver.run do
+  driver.run(default_tag: tag) do
     dog = driver.instance.instance_variable_get(:@dog)
     yield(driver, dog)
   end
