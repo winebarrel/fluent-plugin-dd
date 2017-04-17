@@ -51,8 +51,6 @@ class Fluent::Plugin::DdOutput < Fluent::Plugin::Output
   end
 
   def shutdown
-    super
-
     if @emit_in_background
       @threads.size.times do
         @queue.push(false)
@@ -61,6 +59,8 @@ class Fluent::Plugin::DdOutput < Fluent::Plugin::Output
         thread.join
       end
     end
+
+    super
   end
 
   def configure(conf)
