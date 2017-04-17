@@ -1,3 +1,6 @@
+require 'dogapi'
+require 'socket'
+require 'thread'
 require 'fluent/plugin/output'
 
 class Fluent::Plugin::DdOutput < Fluent::Plugin::Output
@@ -28,9 +31,6 @@ class Fluent::Plugin::DdOutput < Fluent::Plugin::Output
 
   def initialize
     super
-    require 'dogapi'
-    require 'socket'
-    require 'thread'
   end
 
   def start
