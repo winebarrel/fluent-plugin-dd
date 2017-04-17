@@ -1,10 +1,12 @@
-describe Fluent::DdOutput do
+describe Fluent::Plugin::DdOutput do
+  include Fluent::Test::Helpers
+
   let(:time) {
-    Time.parse('2014-02-08 04:14:15 UTC').to_i
+    event_time('2014-02-08 04:14:15 UTC')
   }
 
   it 'should load config' do
-    driver = Fluent::Test::OutputTestDriver.new(Fluent::DdOutput, 'test.default')
+    driver = Fluent::Test::Driver::Output.new(Fluent::Plugin::DdOutput)
 
     driver.configure(<<-EOS)
       type dd
@@ -37,13 +39,13 @@ describe Fluent::DdOutput do
     run_driver do |d, dog|
       expect(dog).to receive(:emit_points).with(
         "some.metric.name",
-        [[Time.parse("2014-02-08 04:14:15 UTC"), 50.0],
-         [Time.parse("2014-02-08 04:14:15 UTC"), 100.0]],
+        [[Time.at(event_time("2014-02-08 04:14:15 UTC")), 50.0],
+         [Time.at(event_time("2014-02-08 04:14:15 UTC")), 100.0]],
         {}
       )
 
-      d.emit({"metric" => "some.metric.name", "value" => 50.0}, time)
-      d.emit({"metric" => "some.metric.name", "value" => 100.0}, time)
+      d.feed(time, {"metric" => "some.metric.name", "value" => 50.0})
+      d.feed(time, {"metric" => "some.metric.name", "value" => 100.0})
     end
   end
 
@@ -60,13 +62,13 @@ describe Fluent::DdOutput do
       run_driver(:emit_in_background => true) do |d, dog|
         expect(dog).to receive(:emit_points).with(
           "some.metric.name",
-          [[Time.parse("2014-02-08 04:14:15 UTC"), 50.0],
-           [Time.parse("2014-02-08 04:14:15 UTC"), 100.0]],
+          [[Time.at(event_time("2014-02-08 04:14:15 UTC")), 50.0],
+           [Time.at(event_time("2014-02-08 04:14:15 UTC")), 100.0]],
           {}
         )
 
-        d.emit({"metric" => "some.metric.name", "value" => 50.0}, time)
-        d.emit({"metric" => "some.metric.name", "value" => 100.0}, time)
+        d.feed(time, {"metric" => "some.metric.name", "value" => 50.0})
+        d.feed(time, {"metric" => "some.metric.name", "value" => 100.0})
       end
     end
 
@@ -77,21 +79,22 @@ describe Fluent::DdOutput do
       ) do |d, dog|
         expect(dog).to receive(:emit_points).with(
           "some.metric.name.1",
-          [[Time.parse("2014-02-08 04:14:15 UTC"), 50.0]],
+          [[Time.at(event_time("2014-02-08 04:14:15 UTC")), 50.0]],
           {}
         )
         expect(dog).to receive(:emit_points).with(
           "some.metric.name.2",
-          [[Time.parse("2014-02-08 04:14:15 UTC"), 100.0]],
+          [[Time.at(event_time("2014-02-08 04:14:15 UTC")), 100.0]],
           {}
         )
 
-        d.emit({"metric" => "some.metric.name.1", "value" => 50.0}, time)
-        d.emit({"metric" => "some.metric.name.2", "value" => 100.0}, time)
-      end
+        d.feed(time, {"metric" => "some.metric.name.1", "value" => 50.0})
+        d.feed(time, {"metric" => "some.metric.name.2", "value" => 100.0})
 
-      expect($threads_array_for_test.size).to eq(2)
-      expect($threads_array_for_test[0]).not_to eq($threads_array_for_test[1])
+        threads = d.instance.instance_variable_get(:@threads)
+        expect(threads.size).to eq(2)
+        expect(threads[0]).not_to eq(threads[1])
+      end
     end
   end
 
@@ -99,50 +102,51 @@ describe Fluent::DdOutput do
     run_driver(:use_fluentd_tag_for_datadog_tag => true) do |d, dog|
       expect(dog).to receive(:emit_points).with(
         "some.metric.name",
-        [[Time.parse("2014-02-08 04:14:15 UTC"), 50.0],
-         [Time.parse("2014-02-08 04:14:15 UTC"), 100.0]],
+        [[Time.at(event_time("2014-02-08 04:14:15 UTC")), 50.0],
+         [Time.at(event_time("2014-02-08 04:14:15 UTC")), 100.0]],
         {:tags=>["test.default"]}
       )
 
-      d.emit({"metric" => "some.metric.name", "value" => 50.0}, time)
-      d.emit({"metric" => "some.metric.name", "value" => 100.0}, time)
+      d.feed(time, {"metric" => "some.metric.name", "value" => 50.0})
+      d.feed(time, {"metric" => "some.metric.name", "value" => 100.0})
     end
   end
 
   it 'should be called emit_points for each tag' do
-    run_driver(:use_fluentd_tag_for_datadog_tag => true) do |d, dog|
+    run_driver(:use_fluentd_tag_for_datadog_tag => true, :tag => 'test.1') do |d, dog|
       expect(dog).to receive(:emit_points).with(
         "some.metric.name",
-        [[Time.parse("2014-02-08 04:14:15 UTC"), 50.0],
-         [Time.parse("2014-02-08 04:14:15 UTC"), 100.0]],
+        [[Time.at(event_time("2014-02-08 04:14:15 UTC")), 50.0],
+         [Time.at(event_time("2014-02-08 04:14:15 UTC")), 100.0]],
         {:tags=>["test.1"]}
       )
 
+      d.feed(time, {"metric" => "some.metric.name", "value" => 50.0})
+      d.feed(time, {"metric" => "some.metric.name", "value" => 100.0})
+    end
+
+    run_driver(:use_fluentd_tag_for_datadog_tag => true, :tag => 'test.2') do |d, dog|
       expect(dog).to receive(:emit_points).with(
         "some.metric.name",
-        [[Time.parse("2014-02-08 04:14:15 UTC"), 150.0],
-         [Time.parse("2014-02-08 04:14:15 UTC"), 200.0]],
+        [[Time.at(event_time("2014-02-08 04:14:15 UTC")), 150.0],
+         [Time.at(event_time("2014-02-08 04:14:15 UTC")), 200.0]],
         {:tags=>["test.2"]}
       )
 
+      d.feed(time, {"metric" => "some.metric.name", "value" => 150.0})
+      d.feed(time, {"metric" => "some.metric.name", "value" => 200.0})
+    end
+
+    run_driver(:use_fluentd_tag_for_datadog_tag => true, :tag => 'test.3') do |d, dog|
       expect(dog).to receive(:emit_points).with(
         "some.metric.name",
-        [[Time.parse("2014-02-08 04:14:15 UTC"), 250.0],
-         [Time.parse("2014-02-08 04:14:15 UTC"), 300.0]],
+        [[Time.at(event_time("2014-02-08 04:14:15 UTC")), 250.0],
+         [Time.at(event_time("2014-02-08 04:14:15 UTC")), 300.0]],
         {:tags=>["test.3"]}
       )
 
-      d.tag = 'test.1'
-      d.emit({"metric" => "some.metric.name", "value" => 50.0}, time)
-      d.emit({"metric" => "some.metric.name", "value" => 100.0}, time)
-
-      d.tag = 'test.2'
-      d.emit({"metric" => "some.metric.name", "value" => 150.0}, time)
-      d.emit({"metric" => "some.metric.name", "value" => 200.0}, time)
-
-      d.tag = 'test.3'
-      d.emit({"metric" => "some.metric.name", "value" => 250.0}, time)
-      d.emit({"metric" => "some.metric.name", "value" => 300.0}, time)
+      d.feed(time, {"metric" => "some.metric.name", "value" => 250.0})
+      d.feed(time, {"metric" => "some.metric.name", "value" => 300.0})
     end
   end
 
@@ -150,33 +154,33 @@ describe Fluent::DdOutput do
     run_driver do |d, dog|
       expect(dog).to receive(:emit_points).with(
         "some.metric.name",
-        [[Time.parse("2014-02-08 04:14:15 UTC"), 50.0],
-         [Time.parse("2014-02-08 04:14:15 UTC"), 100.0]],
+        [[Time.at(event_time("2014-02-08 04:14:15 UTC")), 50.0],
+         [Time.at(event_time("2014-02-08 04:14:15 UTC")), 100.0]],
         {:tags=>["test.11"]}
       )
 
       expect(dog).to receive(:emit_points).with(
         "some.metric.name",
-        [[Time.parse("2014-02-08 04:14:15 UTC"), 150.0],
-         [Time.parse("2014-02-08 04:14:15 UTC"), 200.0]],
+        [[Time.at(event_time("2014-02-08 04:14:15 UTC")), 150.0],
+         [Time.at(event_time("2014-02-08 04:14:15 UTC")), 200.0]],
         {:tags=>["test.21"]}
       )
 
       expect(dog).to receive(:emit_points).with(
         "some.metric.name",
-        [[Time.parse("2014-02-08 04:14:15 UTC"), 250.0],
-         [Time.parse("2014-02-08 04:14:15 UTC"), 300.0]],
+        [[Time.at(event_time("2014-02-08 04:14:15 UTC")), 250.0],
+         [Time.at(event_time("2014-02-08 04:14:15 UTC")), 300.0]],
         {:tags=>["test.31"]}
       )
 
-      d.emit({"metric" => "some.metric.name", "value" => 50.0,  "tag" => "test.11"}, time)
-      d.emit({"metric" => "some.metric.name", "value" => 100.0, "tag" => "test.11"}, time)
+      d.feed(time, {"metric" => "some.metric.name", "value" => 50.0,  "tag" => "test.11"})
+      d.feed(time, {"metric" => "some.metric.name", "value" => 100.0, "tag" => "test.11"})
 
-      d.emit({"metric" => "some.metric.name", "value" => 150.0, "tag" => "test.21"}, time)
-      d.emit({"metric" => "some.metric.name", "value" => 200.0, "tag" => "test.21"}, time)
+      d.feed(time, {"metric" => "some.metric.name", "value" => 150.0, "tag" => "test.21"})
+      d.feed(time, {"metric" => "some.metric.name", "value" => 200.0, "tag" => "test.21"})
 
-      d.emit({"metric" => "some.metric.name", "value" => 250.0, "tag" => "test.31"}, time)
-      d.emit({"metric" => "some.metric.name", "value" => 300.0, "tag" => "test.31"}, time)
+      d.feed(time, {"metric" => "some.metric.name", "value" => 250.0, "tag" => "test.31"})
+      d.feed(time, {"metric" => "some.metric.name", "value" => 300.0, "tag" => "test.31"})
     end
   end
 
@@ -184,33 +188,33 @@ describe Fluent::DdOutput do
     run_driver do |d, dog|
       expect(dog).to receive(:emit_points).with(
         "some.metric.name",
-        [[Time.parse("2014-02-08 04:14:15 UTC"), 50.0],
-         [Time.parse("2014-02-08 04:14:15 UTC"), 100.0]],
+        [[Time.at(event_time("2014-02-08 04:14:15 UTC")), 50.0],
+         [Time.at(event_time("2014-02-08 04:14:15 UTC")), 100.0]],
         {:tags=>["test.12","test.13"]}
       )
 
       expect(dog).to receive(:emit_points).with(
         "some.metric.name",
-        [[Time.parse("2014-02-08 04:14:15 UTC"), 150.0],
-         [Time.parse("2014-02-08 04:14:15 UTC"), 200.0]],
+        [[Time.at(event_time("2014-02-08 04:14:15 UTC")), 150.0],
+         [Time.at(event_time("2014-02-08 04:14:15 UTC")), 200.0]],
         {:tags=>["test.22","test.23"]}
       )
 
       expect(dog).to receive(:emit_points).with(
         "some.metric.name",
-        [[Time.parse("2014-02-08 04:14:15 UTC"), 250.0],
-         [Time.parse("2014-02-08 04:14:15 UTC"), 300.0]],
+        [[Time.at(event_time("2014-02-08 04:14:15 UTC")), 250.0],
+         [Time.at(event_time("2014-02-08 04:14:15 UTC")), 300.0]],
         {:tags=>["test.32","test.33"]}
       )
 
-      d.emit({"metric" => "some.metric.name", "value" => 50.0,  "tag" => "test.12,test.13"}, time)
-      d.emit({"metric" => "some.metric.name", "value" => 100.0, "tag" => "test.12,test.13"}, time)
+      d.feed(time, {"metric" => "some.metric.name", "value" => 50.0,  "tag" => "test.12,test.13"})
+      d.feed(time, {"metric" => "some.metric.name", "value" => 100.0, "tag" => "test.12,test.13"})
 
-      d.emit({"metric" => "some.metric.name", "value" => 150.0, "tag" => "test.22,test.23"}, time)
-      d.emit({"metric" => "some.metric.name", "value" => 200.0, "tag" => "test.22,test.23"}, time)
+      d.feed(time, {"metric" => "some.metric.name", "value" => 150.0, "tag" => "test.22,test.23"})
+      d.feed(time, {"metric" => "some.metric.name", "value" => 200.0, "tag" => "test.22,test.23"})
 
-      d.emit({"metric" => "some.metric.name", "value" => 250.0, "tag" => "test.32,test.33"}, time)
-      d.emit({"metric" => "some.metric.name", "value" => 300.0, "tag" => "test.32,test.33"}, time)
+      d.feed(time, {"metric" => "some.metric.name", "value" => 250.0, "tag" => "test.32,test.33"})
+      d.feed(time, {"metric" => "some.metric.name", "value" => 300.0, "tag" => "test.32,test.33"})
     end
   end
 
@@ -218,31 +222,31 @@ describe Fluent::DdOutput do
     run_driver do |d, dog|
       expect(dog).to receive(:emit_points).with(
         "some.metric.name",
-        [[Time.parse("2014-02-08 04:14:15 UTC"), 50.0],
-         [Time.parse("2014-02-08 04:14:15 UTC"), 100.0]],
+        [[Time.at(event_time("2014-02-08 04:14:15 UTC")), 50.0],
+         [Time.at(event_time("2014-02-08 04:14:15 UTC")), 100.0]],
         {:host=>"www1.example.com"}
       )
 
       expect(dog).to receive(:emit_points).with(
         "some.metric.name",
-        [[Time.parse("2014-02-08 04:14:15 UTC"), 150.0],
-         [Time.parse("2014-02-08 04:14:15 UTC"), 200.0]],
+        [[Time.at(event_time("2014-02-08 04:14:15 UTC")), 150.0],
+         [Time.at(event_time("2014-02-08 04:14:15 UTC")), 200.0]],
         {:host=>"www2.example.com"}
       )
 
       expect(dog).to receive(:emit_points).with(
         "some.metric.name",
-        [[Time.parse("2014-02-08 04:14:15 UTC"), 250.0],
-         [Time.parse("2014-02-08 04:14:15 UTC"), 300.0]],
+        [[Time.at(event_time("2014-02-08 04:14:15 UTC")), 250.0],
+         [Time.at(event_time("2014-02-08 04:14:15 UTC")), 300.0]],
         {:host=>"www3.example.com"}
       )
 
-      d.emit({"metric" => "some.metric.name", "value" => 50.0, "host" => "www1.example.com"}, time)
-      d.emit({"metric" => "some.metric.name", "value" => 100.0, "host" => "www1.example.com"}, time)
-      d.emit({"metric" => "some.metric.name", "value" => 150.0, "host" => "www2.example.com"}, time)
-      d.emit({"metric" => "some.metric.name", "value" => 200.0, "host" => "www2.example.com"}, time)
-      d.emit({"metric" => "some.metric.name", "value" => 250.0, "host" => "www3.example.com"}, time)
-      d.emit({"metric" => "some.metric.name", "value" => 300.0, "host" => "www3.example.com"}, time)
+      d.feed(time, {"metric" => "some.metric.name", "value" => 50.0, "host" => "www1.example.com"})
+      d.feed(time, {"metric" => "some.metric.name", "value" => 100.0, "host" => "www1.example.com"})
+      d.feed(time, {"metric" => "some.metric.name", "value" => 150.0, "host" => "www2.example.com"})
+      d.feed(time, {"metric" => "some.metric.name", "value" => 200.0, "host" => "www2.example.com"})
+      d.feed(time, {"metric" => "some.metric.name", "value" => 250.0, "host" => "www3.example.com"})
+      d.feed(time, {"metric" => "some.metric.name", "value" => 300.0, "host" => "www3.example.com"})
     end
   end
 
@@ -250,31 +254,31 @@ describe Fluent::DdOutput do
     run_driver do |d, dog|
       expect(dog).to receive(:emit_points).with(
         "some.metric.name",
-        [[Time.parse("2014-02-08 04:14:15 UTC"), 50.0],
-         [Time.parse("2014-02-08 04:14:15 UTC"), 100.0]],
+        [[Time.at(event_time("2014-02-08 04:14:15 UTC")), 50.0],
+         [Time.at(event_time("2014-02-08 04:14:15 UTC")), 100.0]],
         {:device=>"device1"}
       )
 
       expect(dog).to receive(:emit_points).with(
         "some.metric.name",
-        [[Time.parse("2014-02-08 04:14:15 UTC"), 150.0],
-         [Time.parse("2014-02-08 04:14:15 UTC"), 200.0]],
+        [[Time.at(event_time("2014-02-08 04:14:15 UTC")), 150.0],
+         [Time.at(event_time("2014-02-08 04:14:15 UTC")), 200.0]],
         {:device=>"device2"}
       )
 
       expect(dog).to receive(:emit_points).with(
         "some.metric.name",
-        [[Time.parse("2014-02-08 04:14:15 UTC"), 250.0],
-         [Time.parse("2014-02-08 04:14:15 UTC"), 300.0]],
+        [[Time.at(event_time("2014-02-08 04:14:15 UTC")), 250.0],
+         [Time.at(event_time("2014-02-08 04:14:15 UTC")), 300.0]],
         {:device=>"device3"}
       )
 
-      d.emit({"metric" => "some.metric.name", "value" => 50.0, "device" => "device1"}, time)
-      d.emit({"metric" => "some.metric.name", "value" => 100.0, "device" => "device1"}, time)
-      d.emit({"metric" => "some.metric.name", "value" => 150.0, "device" => "device2"}, time)
-      d.emit({"metric" => "some.metric.name", "value" => 200.0, "device" => "device2"}, time)
-      d.emit({"metric" => "some.metric.name", "value" => 250.0, "device" => "device3"}, time)
-      d.emit({"metric" => "some.metric.name", "value" => 300.0, "device" => "device3"}, time)
+      d.feed(time, {"metric" => "some.metric.name", "value" => 50.0, "device" => "device1"})
+      d.feed(time, {"metric" => "some.metric.name", "value" => 100.0, "device" => "device1"})
+      d.feed(time, {"metric" => "some.metric.name", "value" => 150.0, "device" => "device2"})
+      d.feed(time, {"metric" => "some.metric.name", "value" => 200.0, "device" => "device2"})
+      d.feed(time, {"metric" => "some.metric.name", "value" => 250.0, "device" => "device3"})
+      d.feed(time, {"metric" => "some.metric.name", "value" => 300.0, "device" => "device3"})
     end
   end
 
@@ -282,22 +286,22 @@ describe Fluent::DdOutput do
     run_driver do |d, dog|
       expect(dog).to receive(:emit_points).with(
         "some.metric.name",
-        [[Time.parse("2014-02-08 04:14:15 UTC"), 50.0],
-         [Time.parse("2014-02-08 04:14:15 UTC"), 100.0]],
+        [[Time.at(event_time("2014-02-08 04:14:15 UTC")), 50.0],
+         [Time.at(event_time("2014-02-08 04:14:15 UTC")), 100.0]],
         {:type=>"gauge"}
       )
 
       expect(dog).to receive(:emit_points).with(
         "some.metric.name",
-        [[Time.parse("2014-02-08 04:14:15 UTC"), 150.0],
-         [Time.parse("2014-02-08 04:14:15 UTC"), 200.0]],
+        [[Time.at(event_time("2014-02-08 04:14:15 UTC")), 150.0],
+         [Time.at(event_time("2014-02-08 04:14:15 UTC")), 200.0]],
         {:type=>"counter"}
       )
 
-      d.emit({"metric" => "some.metric.name", "value" => 50.0, "type" => "gauge"}, time)
-      d.emit({"metric" => "some.metric.name", "value" => 100.0, "type" => "gauge"}, time)
-      d.emit({"metric" => "some.metric.name", "value" => 150.0, "type" => "counter"}, time)
-      d.emit({"metric" => "some.metric.name", "value" => 200.0, "type" => "counter"}, time)
+      d.feed(time, {"metric" => "some.metric.name", "value" => 50.0, "type" => "gauge"})
+      d.feed(time, {"metric" => "some.metric.name", "value" => 100.0, "type" => "gauge"})
+      d.feed(time, {"metric" => "some.metric.name", "value" => 150.0, "type" => "counter"})
+      d.feed(time, {"metric" => "some.metric.name", "value" => 200.0, "type" => "counter"})
     end
   end
 
@@ -305,8 +309,8 @@ describe Fluent::DdOutput do
     run_driver do |d, dog|
       expect(dog).to receive(:emit_points).with(
         "some.metric.name",
-        [[Time.parse("2014-02-08 04:14:15 UTC"), 50.0],
-         [Time.parse("2014-02-08 04:14:15 UTC"), 100.0]],
+        [[Time.at(event_time("2014-02-08 04:14:15 UTC")), 50.0],
+         [Time.at(event_time("2014-02-08 04:14:15 UTC")), 100.0]],
         {}
       )
 
@@ -316,10 +320,10 @@ describe Fluent::DdOutput do
       expect(log).to receive(:warn)
          .with('`metric` key does not exist: ["test.default", 1391832855, {"no metric"=>"some.metric.name", "value"=>101.0}]')
 
-      d.emit({"no metric" => "some.metric.name", "value" => 51.0}, time)
-      d.emit({"no metric" => "some.metric.name", "value" => 101.0}, time)
-      d.emit({"metric" => "some.metric.name", "value" => 50.0}, time)
-      d.emit({"metric" => "some.metric.name", "value" => 100.0}, time)
+      d.feed(time, {"no metric" => "some.metric.name", "value" => 51.0})
+      d.feed(time, {"no metric" => "some.metric.name", "value" => 101.0})
+      d.feed(time, {"metric" => "some.metric.name", "value" => 50.0})
+      d.feed(time, {"metric" => "some.metric.name", "value" => 100.0})
     end
   end
 end

@@ -1,5 +1,11 @@
-class Fluent::DdOutput < Fluent::BufferedOutput
+require 'fluent/plugin/output'
+
+class Fluent::Plugin::DdOutput < Fluent::Plugin::Output
   Fluent::Plugin.register_output('dd', self)
+
+  helpers :compat_parameters
+
+  DEFAULT_BUFFER_TYPE = "memory"
 
   unless method_defined?(:log)
     define_method('log') { $log }
@@ -14,6 +20,11 @@ class Fluent::DdOutput < Fluent::BufferedOutput
   config_param :use_fluentd_tag_for_datadog_tag, :bool, :default => false
   config_param :emit_in_background, :bool, :default => false
   config_param :concurrency, :integer, :default => nil
+
+  config_section :buffer do
+    config_set_default :@type, DEFAULT_BUFFER_TYPE
+    config_set_default :chunk_keys, ['tag']
+  end
 
   def initialize
     super
@@ -53,6 +64,7 @@ class Fluent::DdOutput < Fluent::BufferedOutput
   end
 
   def configure(conf)
+    compat_parameters_convert(conf, :buffer)
     super
 
     unless @dd_api_key
@@ -74,6 +86,10 @@ class Fluent::DdOutput < Fluent::BufferedOutput
 
   def format(tag, time, record)
     [tag, time, record].to_msgpack
+  end
+
+  def formatted_to_msgpack_binary
+    true
   end
 
   def write(chunk)
