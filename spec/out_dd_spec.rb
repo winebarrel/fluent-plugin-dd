@@ -50,14 +50,6 @@ describe Fluent::Plugin::DdOutput do
   end
 
   context 'with emit_in_background' do
-    before do
-      $threads_array_for_test = []
-    end
-
-    after do
-      $threads_array_for_test = nil
-    end
-
     it 'should be called emit_points in the background' do
       run_driver(:emit_in_background => true) do |d, dog|
         expect(dog).to receive(:emit_points).with(
