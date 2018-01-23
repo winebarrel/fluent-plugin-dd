@@ -84,6 +84,10 @@ class Fluent::Plugin::DdOutput < Fluent::Plugin::Output
     @dog = Dogapi::Client.new(@dd_api_key, @dd_app_key, @host, @device, @silent, @timeout)
   end
 
+  def multi_workers_ready?
+    true
+  end
+
   def format(tag, time, record)
     [tag, time, record].to_msgpack
   end
