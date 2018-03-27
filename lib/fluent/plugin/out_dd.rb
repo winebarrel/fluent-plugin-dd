@@ -10,10 +10,6 @@ class Fluent::Plugin::DdOutput < Fluent::Plugin::Output
 
   DEFAULT_BUFFER_TYPE = "memory"
 
-  unless method_defined?(:log)
-    define_method('log') { $log }
-  end
-
   config_param :dd_api_key, :string, :secret => true
   config_param :dd_app_key, :string, :default => nil, :secret => true
   config_param :host, :string, :default => nil
