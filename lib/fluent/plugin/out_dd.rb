@@ -10,10 +10,6 @@ class Fluent::Plugin::DdOutput < Fluent::Plugin::Output
 
   DEFAULT_BUFFER_TYPE = "memory"
 
-  unless method_defined?(:log)
-    define_method('log') { $log }
-  end
-
   config_param :dd_api_key, :string, :secret => true
   config_param :dd_app_key, :string, :default => nil, :secret => true
   config_param :host, :string, :default => nil
@@ -27,10 +23,6 @@ class Fluent::Plugin::DdOutput < Fluent::Plugin::Output
   config_section :buffer do
     config_set_default :@type, DEFAULT_BUFFER_TYPE
     config_set_default :chunk_keys, ['tag']
-  end
-
-  def initialize
-    super
   end
 
   def start
@@ -66,10 +58,6 @@ class Fluent::Plugin::DdOutput < Fluent::Plugin::Output
   def configure(conf)
     compat_parameters_convert(conf, :buffer)
     super
-
-    unless @dd_api_key
-      raise Fluent::ConfigError, '`dd_api_key` is required'
-    end
 
     if !@emit_in_background && @concurrency
       raise Fluent::ConfigError, '`concurrency` should be used with `emit_in_background`'
