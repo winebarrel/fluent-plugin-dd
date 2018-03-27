@@ -25,10 +25,6 @@ class Fluent::Plugin::DdOutput < Fluent::Plugin::Output
     config_set_default :chunk_keys, ['tag']
   end
 
-  def initialize
-    super
-  end
-
   def start
     super
 
