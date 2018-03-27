@@ -59,10 +59,6 @@ class Fluent::Plugin::DdOutput < Fluent::Plugin::Output
     compat_parameters_convert(conf, :buffer)
     super
 
-    unless @dd_api_key
-      raise Fluent::ConfigError, '`dd_api_key` is required'
-    end
-
     if !@emit_in_background && @concurrency
       raise Fluent::ConfigError, '`concurrency` should be used with `emit_in_background`'
     end
