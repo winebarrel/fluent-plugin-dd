@@ -1,12 +1,11 @@
 require 'dogapi'
 require 'socket'
-require 'thread'
 require 'fluent/plugin/output'
 
 class Fluent::Plugin::DdOutput < Fluent::Plugin::Output
   Fluent::Plugin.register_output('dd', self)
 
-  helpers :compat_parameters
+  helpers :compat_parameters, :thread
 
   DEFAULT_BUFFER_TYPE = "memory"
 
@@ -31,8 +30,8 @@ class Fluent::Plugin::DdOutput < Fluent::Plugin::Output
     if @emit_in_background
       @queue = Queue.new
 
-      @threads = @concurrency.times.map do
-        Thread.start do
+      @concurrency.times do |n|
+        thread_create("out_dd_#{n}".to_sym) do
           while (job = @queue.pop)
             emit_points(*job)
             Thread.pass
@@ -44,11 +43,8 @@ class Fluent::Plugin::DdOutput < Fluent::Plugin::Output
 
   def shutdown
     if @emit_in_background
-      @threads.size.times do
+      @concurrency.times do
         @queue.push(false)
-      end
-      @threads.each do |thread|
-        thread.join
       end
     end
 

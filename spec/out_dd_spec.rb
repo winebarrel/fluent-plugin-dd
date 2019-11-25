@@ -82,10 +82,6 @@ describe Fluent::Plugin::DdOutput do
 
         d.feed(time, {"metric" => "some.metric.name.1", "value" => 50.0})
         d.feed(time, {"metric" => "some.metric.name.2", "value" => 100.0})
-
-        threads = d.instance.instance_variable_get(:@threads)
-        expect(threads.size).to eq(2)
-        expect(threads[0]).not_to eq(threads[1])
       end
     end
   end
