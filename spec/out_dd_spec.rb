@@ -9,7 +9,6 @@ describe Fluent::Plugin::DdOutput do
     driver = Fluent::Test::Driver::Output.new(Fluent::Plugin::DdOutput)
 
     driver.configure(<<-EOS)
-      type dd
       dd_api_key API_KEY
       dd_app_key APP_KEY
       host my_host.example.com
@@ -17,7 +16,6 @@ describe Fluent::Plugin::DdOutput do
       silent false
       timeout 5
       use_fluentd_tag_for_datadog_tag true
-      emit_in_background true
     EOS
 
     expect(driver.instance.dd_api_key).to eq 'API_KEY'
@@ -27,7 +25,6 @@ describe Fluent::Plugin::DdOutput do
     expect(driver.instance.silent).to eq false
     expect(driver.instance.timeout).to eq 5
     expect(driver.instance.use_fluentd_tag_for_datadog_tag).to eq true
-    expect(driver.instance.emit_in_background).to eq true
   end
 
   it 'should receive an API key' do
@@ -46,47 +43,6 @@ describe Fluent::Plugin::DdOutput do
 
       d.feed(time, {"metric" => "some.metric.name", "value" => 50.0})
       d.feed(time, {"metric" => "some.metric.name", "value" => 100.0})
-    end
-  end
-
-  context 'with emit_in_background' do
-    it 'should be called emit_points in the background' do
-      run_driver(:emit_in_background => true) do |d, dog|
-        expect(dog).to receive(:emit_points).with(
-          "some.metric.name",
-          [[Time.at(event_time("2014-02-08 04:14:15 UTC")), 50.0],
-           [Time.at(event_time("2014-02-08 04:14:15 UTC")), 100.0]],
-          {}
-        )
-
-        d.feed(time, {"metric" => "some.metric.name", "value" => 50.0})
-        d.feed(time, {"metric" => "some.metric.name", "value" => 100.0})
-      end
-    end
-
-    it 'should be called emit_points in the background and in the different thread' do
-      run_driver(
-        :emit_in_background => true,
-        :concurrency => 2,
-      ) do |d, dog|
-        expect(dog).to receive(:emit_points).with(
-          "some.metric.name.1",
-          [[Time.at(event_time("2014-02-08 04:14:15 UTC")), 50.0]],
-          {}
-        )
-        expect(dog).to receive(:emit_points).with(
-          "some.metric.name.2",
-          [[Time.at(event_time("2014-02-08 04:14:15 UTC")), 100.0]],
-          {}
-        )
-
-        d.feed(time, {"metric" => "some.metric.name.1", "value" => 50.0})
-        d.feed(time, {"metric" => "some.metric.name.2", "value" => 100.0})
-
-        threads = d.instance.instance_variable_get(:@threads)
-        expect(threads.size).to eq(2)
-        expect(threads[0]).not_to eq(threads[1])
-      end
     end
   end
 

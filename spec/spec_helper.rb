@@ -26,7 +26,6 @@ def run_driver(options = {})
   }.join("\n")
 
   fluentd_conf = <<-EOS
-type datadog
 dd_api_key #{dd_api_key}
 host #{host}
 #{additional_options}
@@ -35,7 +34,7 @@ host #{host}
   tag = options[:tag] || 'test.default'
   driver = Fluent::Test::Driver::Output.new(Fluent::Plugin::DdOutput).configure(fluentd_conf)
 
-  driver.run(default_tag: tag) do
+  driver.run(default_tag: tag, wait_flush_completion: false, shutdown: false) do
     dog = driver.instance.instance_variable_get(:@dog)
     yield(driver, dog)
   end
