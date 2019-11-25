@@ -9,15 +9,15 @@ class Fluent::Plugin::DdOutput < Fluent::Plugin::Output
 
   DEFAULT_BUFFER_TYPE = "memory"
 
-  config_param :dd_api_key, :string, :secret => true
-  config_param :dd_app_key, :string, :default => nil, :secret => true
-  config_param :host, :string, :default => nil
-  config_param :device, :string, :default => nil
-  config_param :silent, :bool, :default => true
-  config_param :timeout, :integer, :default => nil
-  config_param :use_fluentd_tag_for_datadog_tag, :bool, :default => false
-  config_param :emit_in_background, :bool, :default => false
-  config_param :concurrency, :integer, :default => nil
+  config_param :dd_api_key, :string, secret: true
+  config_param :dd_app_key, :string, default: nil, secret: true
+  config_param :host, :string, default: nil
+  config_param :device, :string, default: nil
+  config_param :silent, :bool, default: true
+  config_param :timeout, :integer, default: nil
+  config_param :use_fluentd_tag_for_datadog_tag, :bool, default: false
+  config_param :emit_in_background, :bool, default: false
+  config_param :concurrency, :integer, default: nil
 
   config_section :buffer do
     config_set_default :@type, DEFAULT_BUFFER_TYPE
