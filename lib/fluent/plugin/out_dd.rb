@@ -5,7 +5,7 @@ require 'fluent/plugin/output'
 class Fluent::Plugin::DdOutput < Fluent::Plugin::Output
   Fluent::Plugin.register_output('dd', self)
 
-  helpers :compat_parameters
+  helpers :compat_parameters, :timer
 
   DEFAULT_BUFFER_TYPE = "memory"
 
@@ -16,52 +16,16 @@ class Fluent::Plugin::DdOutput < Fluent::Plugin::Output
   config_param :silent, :bool, default: true
   config_param :timeout, :integer, default: nil
   config_param :use_fluentd_tag_for_datadog_tag, :bool, default: false
-  config_param :emit_in_background, :bool, default: false
-  config_param :concurrency, :integer, default: nil
+  config_param :wait_job_interval, :time, default: 3
 
   config_section :buffer do
     config_set_default :@type, DEFAULT_BUFFER_TYPE
     config_set_default :chunk_keys, ['tag']
   end
 
-  def start
-    super
-
-    if @emit_in_background
-      @queue = Queue.new
-
-      @threads = @concurrency.times.map do
-        Thread.start do
-          while (job = @queue.pop)
-            emit_points(*job)
-            Thread.pass
-          end
-        end
-      end
-    end
-  end
-
-  def shutdown
-    if @emit_in_background
-      @threads.size.times do
-        @queue.push(false)
-      end
-      @threads.each do |thread|
-        thread.join
-      end
-    end
-
-    super
-  end
-
   def configure(conf)
     compat_parameters_convert(conf, :buffer)
     super
-
-    if !@emit_in_background && @concurrency
-      raise Fluent::ConfigError, '`concurrency` should be used with `emit_in_background`'
-    end
-    @concurrency ||= 1
 
     unless @host
       @host = %x[hostname -f 2> /dev/null].strip
@@ -69,9 +33,25 @@ class Fluent::Plugin::DdOutput < Fluent::Plugin::Output
     end
 
     @dog = Dogapi::Client.new(@dd_api_key, @dd_app_key, @host, @device, @silent, @timeout)
+    @waiting_ids_mutex = Mutex.new
+    @waiting_ids = []
+  end
+
+  def start
+    super
+
+    timer_execute(:out_dd_commit_write, @wait_job_interval) do
+      @waiting_ids_mutex.synchronize { @waiting_ids.dup }.each do |chunk_id|
+        commit_write(chunk_id)
+      end
+    end
   end
 
   def multi_workers_ready?
+    true
+  end
+
+  def prefer_delayed_commit
     true
   end
 
@@ -83,16 +63,14 @@ class Fluent::Plugin::DdOutput < Fluent::Plugin::Output
     true
   end
 
-  def write(chunk)
+  def try_write(chunk)
     jobs = chunk_to_jobs(chunk)
+    chunk_id = chunk.unique_id
 
     jobs.each do |job|
-      if @emit_in_background
-        @queue.push(job)
-      else
-        emit_points(*job)
-      end
+      emit_points(*job)
     end
+    @waiting_ids_mutex.synchronize { @waiting_ids << chunk_id }
   end
 
   private
