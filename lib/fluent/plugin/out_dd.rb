@@ -1,6 +1,5 @@
 require 'dogapi'
 require 'socket'
-require 'thread'
 require 'fluent/plugin/output'
 
 class Fluent::Plugin::DdOutput < Fluent::Plugin::Output
